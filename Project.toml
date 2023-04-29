@@ -1,0 +1,7 @@
+name = "StudentLoan"
+uuid = "878a3058-4736-476c-96e4-c6d4c6bf5f33"
+authors = ["Gyan Sinha <gyanorama@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"

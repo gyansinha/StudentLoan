@@ -72,11 +72,14 @@ function generatecashflow(loan::AbstractSmartOptionLoan)
         + Month(loan.grace_period)
     cf_mat = zeros(length(dates), 3)
 
-    cf_bal = loan.amount
-    local pmt 
+    local cf_int, cf_prn, cf_bal, pmt
 
     for (v, d) in enumerate(dates)
-        if d <= pmt_start_date
+        if d == loan.originationdate
+            cf_int = 0
+            cf_prn = 0
+            cf_bal = loan.amount
+        elseif d <= deferment_end_date
             cf_int = cf_bal * loan.interestrate/12.0
             cf_prn = pre_deferment_principal(loan) - cf_int
             cf_bal -= cf_prn
@@ -88,6 +91,7 @@ function generatecashflow(loan::AbstractSmartOptionLoan)
             cf_prn = pmt - cf_int
             cf_bal -= cf_prn
         end
+
         cf_mat[v, 1] = cf_int
         cf_mat[v, 2] = cf_prn
         cf_mat[v, 3] = cf_bal

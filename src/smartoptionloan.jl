@@ -9,10 +9,10 @@ abstract type AbstractSmartOptionLoan <: AbstractLoan end
 struct InterestOnlyLoan <: AbstractSmartOptionLoan
     borrowerid::String
     originationdate::Date
-    p_and_i_repaymentdate::Date
     amount::Union{Float64, Int64}
     interestrate::Union{Float64, Int64}
     term::Integer
+    grace_period::Integer
     deferment_period::Integer
     io_period::Integer
 end
@@ -24,6 +24,7 @@ struct DeferredRepaymentLoan <: AbstractSmartOptionLoan
     amount::Union{Float64, Int64}
     interestrate::Union{Float64, Int64}
     term::Integer
+    grace_period::Integer
     deferment_period::Integer
 end
 
@@ -33,6 +34,7 @@ struct FixedRepaymentLoan <: AbstractSmartOptionLoan
     amount::Union{Float64, Int64}
     interestrate::Union{Float64, Int64}
     term::Integer
+    grace_period::Integer
     deferment_period::Integer
     fixed_pmt::Union{Float64, Int64}
 end
@@ -54,30 +56,32 @@ function display(p::FixedRepaymentLoan)
 end
 
 
-function generatecashflow(loan::InterestOnlyLoan)
-
+function pre_deferment_pmt(loan::Union{InterestOnlyLoan,
+    DeferredRepaymentLoan})
+    return 0.0
 end
 
-function generatecashflow(loan::FixedRepaymentLoan)
-
+function pre_deferment_principal(loan::FixedRepaymentLoan)
+    return 25.0
 end
 
-function generatecashflow(loan::DeferredRepaymentLoan)
+function generatecashflow(loan::AbstractSmartOptionLoan)
     dates = loan.originationdate:Month(1):(loan.originationdate + Month(loan.term))
     
-    deferment_end_date = loan.originationdate + Month(loan.deferment_period)
+    pmt_start_date = loan.originationdate + Month(loan.deferment_period) 
+        + Month(loan.grace_period)
     cf_mat = zeros(length(dates), 3)
 
     cf_bal = loan.amount
     local pmt 
 
     for (v, d) in enumerate(dates)
-        if d <= deferment_end_date
+        if d <= pmt_start_date
             cf_int = cf_bal * loan.interestrate/12.0
-            cf_prn = 0 - cf_int
+            cf_prn = pre_deferment_principal(loan) - cf_int
             cf_bal -= cf_prn
         else 
-            if d == deferment_end_date + Month(1)
+            if d == pmt_start_date + Month(1)
                 pmt = genpmt(cf_bal, loan.interestrate, (loan.term - loan.deferment_period))
             end
             cf_int = cf_bal * loan.interestrate/12.0
@@ -113,3 +117,4 @@ function Base.:+(x::TimeArray, y::TimeArray)
 
     return cf
 end
+

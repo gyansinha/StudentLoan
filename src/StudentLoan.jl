@@ -5,6 +5,7 @@ export
     InterestOnlyLoan, 
     FixedRepaymentLoan, 
     DeferredRepaymentLoan,
-    generatecashflow
+    generatecashflow,
+    pre_deferment_principal
 
 end # module StudentLoan

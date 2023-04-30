@@ -1,6 +1,6 @@
 import Dates: Date, Month
 import Base.display
-import TimeSeries: TimeArray
+import TimeSeries: TimeArray, merge, timestamp
 
 
 abstract type AbstractLoan end
@@ -69,6 +69,8 @@ function generatecashflow(loan::DeferredRepaymentLoan)
     cf_mat = zeros(length(dates), 3)
 
     cf_bal = loan.amount
+    local pmt 
+
     for (v, d) in enumerate(dates)
         if d <= deferment_end_date
             cf_int = cf_bal * loan.interestrate/12.0
@@ -76,7 +78,7 @@ function generatecashflow(loan::DeferredRepaymentLoan)
             cf_bal -= cf_prn
         else 
             if d == deferment_end_date + Month(1)
-                global pmt = genpmt(cf_bal, loan.interestrate, (loan.term - loan.deferment_period))
+                pmt = genpmt(cf_bal, loan.interestrate, (loan.term - loan.deferment_period))
             end
             cf_int = cf_bal * loan.interestrate/12.0
             cf_prn = pmt - cf_int
@@ -95,4 +97,19 @@ function genpmt(amount::AbstractFloat, interestrate::AbstractFloat, term::Intege
     numer = amount * (interestrate/12) * one_plus_r_n
     denom = one_plus_r_n - 1.0
     return numer/denom
+end
+
+function Base.:+(x::TimeArray, y::TimeArray)
+    z_int = merge(x[:, :interest], y[:, :interest], method=:outer, padvalue=0, colnames=[:x, :y])
+    z_prn = merge(x[:, :principal], y[:, :principal], method=:outer, padvalue=0, colnames=[:x, :y])
+    z_bal = merge(x[:, :balance], y[:, :balance], method=:outer, padvalue=0, colnames=[:x, :y])
+
+    cf_int = z_int[:, :x] .+ z_int[:, :y]
+    cf_prn = z_prn[:, :x] .+ z_prn[:, :y]
+    cf_bal = z_bal[:, :x] .+ z_bal[:, :y]
+
+    cf = merge(cf_int, cf_prn, method=:outer, colnames=[:interest, :principal])
+    cf = merge(cf, cf_bal, method=:outer, colnames=[:interest, :principal, :balance])
+
+    return cf
 end
